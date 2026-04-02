@@ -2,16 +2,15 @@ Set Implicit Arguments.
 
 Require Import Datatypes.String Lists.List.
 Import ListNotations.
-Open Scope string.
 Open Scope list.
 From Utils Require Import Utils.
+Open Scope string.
 From Pyrosome Require Import Theory.Core Elab.Elab Tools.Matches Lang.SimpleVSubst Tools.EGraph.Automation Tools.EGraph.Defs Tools.UnElab.
 Import Core.Notations.
 
 Require Coq.derive.Derive.
 
 Compute value_subst_def.
-
 
 Definition fiat_def : lang :=
   {[l/subst [exp_subst++value_subst]
@@ -44,6 +43,7 @@ Definition fiat_def : lang :=
   ];
   [:|  "G": #"env", "n": #"val" "G" #"nat"
        -----------------------------------------------
+
        #"neq_0_r" : #"neq" (#"1+" "n") #"0"
   ];
   [:|  "G": #"env", "n": #"val" "G" #"nat", "m": #"val" "G" #"nat",
@@ -118,6 +118,11 @@ Definition fiat_def : lang :=
       #"orb" "a" "b": #"val" "G" #"bool"
   ];
   [:=
+      "G": #"env"
+      ----------------------------------------------- ("and_true")
+      #"andb" #"true" #"true" = #"true": #"val" "G" #"bool"
+  ];
+  [:=
       "G": #"env", "b": #"val" "G" #"bool"
       ----------------------------------------------- ("and_false_l")
       #"andb" #"false" "b" = #"false": #"val" "G" #"bool"
@@ -147,6 +152,7 @@ Definition fiat_def : lang :=
       ----------------------------------------------- ("non_cont_r")
       #"andb" "b" (#"notb" "b") = #"false": #"val" "G" #"bool"
   ];
+
   (* todo *)
   (* binop definitions *)
     (*
@@ -298,11 +304,11 @@ Definition fiat_def : lang :=
   ];
   (* comparison *)
   (* we probably want to stick to values here, though...? *)
-  (*
   [:| 
       -----------------------------------------------
       #"comparison": #"ty" (* analog: rocq corelib comparison *)
   ]; 
+  (*
   [:| 
       "A": #"ty"
       -----------------------------------------------
@@ -599,19 +605,18 @@ Definition fiat_def : lang :=
       "p": #"val" (#"ext" "G" "t") #"bool"
       ----------------------------------------------- 
       #"filter" "tb" "p": #"val" "G" (#"list" "t")
-      ];
+  ];
+
+    (* Interpreting filter
   [:=
       "G": #"env",
       "t": #"ty",
-      "tl": #"val" "G" ("list" "t"),
-      "th": #"val" "G" "t",
+      "x": #"val" "G" "t",
+      "tb": #"val" "G" (#"list" "t"),
       "p": #"val" (#"ext" "G" "t") #"bool"
-      ----------------------------------------------- ("filter_eval")
-      #"filter" (#"cons" "th" "tl") = #"if" (#"val_subst" (#"snoc") "p") 
-      (#"cons" "th" (#"filter" "t" "p"))
-      (#"filter" "t" "p")
-      : #"val" "G" (#"list" "t")
-      ];
+      ----------------------------------------------- 
+      #"filter" (#"cons" "x" "tb") "p" = #"if" : #"val" "G" (#"list" "t")
+  ]; *)
 
   (* If the predicate is false, then there is nothing in the table *)
   [:=
@@ -621,8 +626,6 @@ Definition fiat_def : lang :=
       ----------------------------------------------- ("filter_empty")
       #"filter" "tb" (#"false") = #"lempty" "t": #"val" "G" (#"list" "t")
   ];
-
-  (*
 
   [:|
       "G": #"env",
@@ -639,9 +642,7 @@ Definition fiat_def : lang :=
       ----------------------------------------------- ("filter_exclude")
       #"filter" "tb" (#"val_subst" #"wkn" (#"exclude" "tb")) = #"lempty" "t": #"val" "G" (#"list" "t")
   ];
-   *)
-    
-    
+
     (*
       Theorem efilter_efilter: forall (store env: locals) (Gstore Genv: tenv) (tb p p2: expr) (x y: string) (f1: list (string*type)),
         tenv_wf Gstore -> tenv_wf Genv -> locals_wf Gstore store -> locals_wf Genv env ->
@@ -712,6 +713,55 @@ Definition fiat_def : lang :=
       -----------------------------------------------  
      #"join" "e1" "e2" "p" "r": #"val" "G" (#"list" "t3")
   ];
+
+  [:|
+     "G": #"env",
+     "t1": #"ty",
+     "t2": #"ty",
+     "e1": #"val" "G" (#"list" "t1"),
+     "e2": #"val" "G" "t2",
+     "e3": #"val" (#"ext" (#"ext" "G" "t1") "t2") "t2"
+      -----------------------------------------------  
+     #"fold" "e1" "e2" "e3" : #"val" "G" "t2"
+  ];
+
+  [:=
+     "G": #"env",
+     "t1": #"ty",
+     "t2": #"ty",
+     "e2": #"val" "G" "t2",
+     "e3": #"val" (#"ext" (#"ext" "G" "t1") "t2") "t2"
+      -----------------------------------------------  ("fold_lempty")
+     #"fold" (#"lempty" "t1") "e2" "e3" = "e2" : #"val" "G" "t2"
+  ];
+
+  [:|
+     "G": #"env",
+     "t": #"ty",
+     "e1": #"val" "G" (#"list" "t"),
+     "e2": #"val" "G" (#"list" "t")
+      -----------------------------------------------  
+     #"listdiff" "e1" "e2" : #"val" "G" (#"list" "t")
+  ];
+
+  [:=
+     "G": #"env",
+     "t": #"ty",
+     "e1": #"val" "G" (#"list" "t")
+      -----------------------------------------------  ("listdiff_empty")
+     #"listdiff" "e1" (#"lempty" "t") = "e1" : #"val" "G" (#"list" "t")
+  ];
+
+    (*
+  [:=
+     "G": #"env",
+     "t": #"ty",
+     "e1": #"val" "G" (#"list" "t"),
+     "e2": #"val" "G" (#"list" "t")
+      -----------------------------------------------  ("listdiff_onestep")
+     #"listdiff" "e1" "e2" = "e1" : #"val" "G" "t"
+  ];
+     *)
    
   (* Special: transforming under rec_special creates something that is never satisfied by filter_special *)
   [:|
@@ -737,61 +787,20 @@ Definition fiat_def : lang :=
   [:|
      "G":  #"env"
       -----------------------------------------------  
-     #"fil_special_never": #"val" "G" #"bool"
-  ];
-  [:|
-     "G":  #"env"
-      -----------------------------------------------  
-     #"fil_special_always": #"val" "G" #"bool"
+     #"any_bool_2": #"val" "G" #"bool"
   ];
 
-     
-  [:=
-     "G":  #"env",
-     "t1": #"ty",
-     "t2": #"ty",
-     "e1": #"val" "G" (#"list" "t1"),
-     "e2": #"val" "G" (#"list" "t2"),
-     "p":  #"val" (#"ext" (#"ext" "G" "t1") "t2") #"bool"
-      -----------------------------------------------  ("special_never")
-     #"filter" (#"join" "e1" "e2" "p" #"rec_special") #"fil_special_never" = #"lempty" (#"Trecord" #"empty_list_ty"): #"val" "G" (#"list" (#"Trecord" #"empty_list_ty"))
-  ];
-
-  [:=
-     "G":  #"env",
-     "t1": #"ty",
-     "t2": #"ty",
-     "e1": #"val" "G" (#"list" "t1"),
-     "e2": #"val" "G" (#"list" "t2"),
-     "p":  #"val" (#"ext" (#"ext" "G" "t1") "t2") #"bool"
-      -----------------------------------------------  ("special_always")
-     #"filter" (#"join" "e1" "e2" "p" #"rec_special") #"fil_special_always" = #"join" "e1" "e2" "p" #"rec_special": #"val" "G" (#"list" (#"Trecord" #"empty_list_ty"))
-  ];
-
-  (* xor: *)
-  (* ask: implementing filter? we don't have this yet. if yes, is it better to make a different interp_expr construct for each? *)
   [:|
      "G":  #"env",
      "lt": #"list_ty"
-      -----------------------------------------------  
-     #"xor": #"val" "G" (#"Trecord" "lt")
+      -----------------------------------------------
+      #"xor": #"val" "G" (#"Trecord" "lt")
   ];
 
   [:|
      "G":  #"env"
       -----------------------------------------------  
      #"nonzero": #"val" "G" #"bool"
-  ];
-
-  [:=
-     "G":   #"env",
-     "tl":  #"list_ty",
-     "e1":  #"val" "G" (#"list" (#"Trecord" "tl")),
-     "e2":  #"val" "G" (#"list" (#"Trecord" "tl")),
-     "a":   #"val" "G" (#"Trecord" "tl"),
-     "p":   #"val" (#"ext" (#"ext" "G" (#"Trecord" "tl")) (#"Trecord" "tl")) #"bool"
-      -----------------------------------------------  ("xor_cut_first")
-     #"filter" (#"join" (#"cons" "a" "e1") (#"cons" "a" "e2") "p" #"xor") #"nonzero" = #"filter" (#"join" "e1" "e2" "p" #"xor") #"nonzero" : #"val" "G" (#"list" (#"Trecord" "tl"))
   ];
 
   (* If the predicate is false, then we there is nothing in the table *)
@@ -930,7 +939,7 @@ Definition fiat_def : lang :=
                                                       (#"snoc" (#"cmp" #"wkn" #"wkn") "r")
                                                       "rp") :
                                                    #"val" "G" (#"list" "ty4")
-    ]
+    ];
 
       (*
   [:|
@@ -1017,6 +1026,40 @@ Definition fiat_def : lang :=
         let pnew := EBinop OAnd p (ELet (EVar x) y p2) in
         interp_expr store env (EFilter (EFilter tb y p2) x p) =
         interp_expr store env (EFilter tb x pnew). *)
+
+
+(*
+    [s| 
+      -----------------------------------------------
+      #"cmd" srt 
+      ];
+    [:|
+       -----------------------------------------------
+      #"skip" : #"cmd" 
+   ];
+    [:| 
+        "x" : #"natural",
+        "e" : #"exp"
+        -----------------------------------------------
+      #"assign" "x" "e" : #"cmd"
+    ];
+    [:| 
+        "cmd1" : #"cmd",
+        "cmd2" : #"cmd"
+      -----------------------------------------------
+      #"seq" "cmd1" "cmd2" : #"cmd" 
+   ];     
+    [:| "e" : #"exp", 
+        "z" : #"cmd",
+        "nz" : #"cmd"
+      -----------------------------------------------
+      #"if0" "e" "z" "nz" : #"cmd"
+    ]; *)
+    [s| 
+      -----------------------------------------------
+      #"end" srt 
+      ]
+
   ]}.
 
 Compute fiat_def.
@@ -1025,7 +1068,6 @@ Compute fiat_def.
    bundle into a rule_set
    call egraph_simpl *)
 
-Compute "computed fiat".
 
 Derive fiat
   SuchThat (elab_lang_ext (exp_subst++value_subst) fiat_def fiat)
@@ -1033,23 +1075,7 @@ Derive fiat
 Proof. auto_elab. Qed.
 #[export] Hint Resolve fiat_wf : elab_pfs.
 
-Compute "derived fiat".
-
 Compute fiat.
-(*
-
-Definition tr := {{e#"join"
-                     (#"join"
-                        (#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty")))
-                        (#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty")))
-                        #"any_bool"
-                        #"rec_special")
-                     (#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty")))
-                     (#"andb" #"any_bool" (#"val_subst" #"wkn" #"fil_special_never"))
-                     #"any_nat"
-                }}.
-
-Check tr.
 
 (*
 Definition tr := {{e#"join"
@@ -1061,7 +1087,39 @@ Definition tr := {{e#"join"
                      #"true"
                      #"0"
                 }}.
+
+Definition tr := {{e#"join"
+                         (#"join" "tb" "tb" #"any_bool" #"rec_special")
+                         "tb"
+                         (#"andb" #"any_bool" (#"val_subst" #"wkn" #"fil_special_never"))
+                         #"any_nat"
+  }}.
+
+Definition tr := {{e#"join"
+                     (#"join"
+                        (#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty")))
+                        (#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty")))
+                        #"any_bool"
+                        #"rec_special")
+                     (#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty")))
+                     (#"andb" #"any_bool" (#"val_subst" #"wkn" #"fil_special_never"))
+                     #"any_nat"
+                }}.
 *)
+
+Definition tr := {{e#"join"
+                        (#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty")))
+                        (#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty")))
+                        #"false"
+                        #"0"
+                     (*
+                     "table_3"
+                     "bool_1"
+                     "nat_1"
+                      *)
+                }}.
+
+Definition empty_list := {{e#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty"))}}.
 
 Axiom (todo : forall a, a).
 
@@ -1075,8 +1133,15 @@ Qed.
 
 Print tr_derived.
 
+Definition rec_type := {{s#"list" (#"Trecord" (#"cons_list_ty" #"bool"
+                                                 (#"cons_list_ty" #"bool"
+                                                    (#"cons_list_ty" #"bool" #"empty_list_ty"))))}}.
+
+(* Optimizations *)
+
 Compute hide_term_implicits (fiat++value_subst)
-  (PositiveInstantiation.egraph_simpl' (fiat++value_subst) 20 20 50 [] tr_derived).
+  (PositiveInstantiation.egraph_simpl' (fiat++value_subst) 10 10 50 [
+     ] tr_derived).
 (*
      = {{e #"join" (#"lempty" (#"Trecord" #"empty_list_ty"))
               (#"cons" #"empty_record" (#"lempty" (#"Trecord" #"empty_list_ty")))
@@ -1084,36 +1149,141 @@ Compute hide_term_implicits (fiat++value_subst)
      : term
 *)
 
-Definition trx := {{e#"join"
+Definition ty := {{s#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))}}.
+
+Definition trw := {{e#"join"
                      (#"join"
-                        (#"cons" (#"cons_record" #"true" (#"cons_record" #"false"))
-                           (#"cons" (#"cons_record" #"false" (#"cons_record" #"false"))
+                        (#"cons" (#"cons_record" #"true" (#"cons_record" #"false" #"empty_record"))
+                           (#"cons" (#"cons_record" #"false" (#"cons_record" #"false" #"empty_record"))
                               (#"lempty" (#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))))))
-                        (#"cons" (#"cons_record" #"true" (#"cons_record" #"false"))
-                           (#"cons" (#"cons_record" #"true" (#"cons_record" #"false"))
+                        (#"cons" (#"cons_record" #"true" (#"cons_record" #"false" #"empty_record"))
+                           (#"cons" (#"cons_record" #"true" (#"cons_record" #"false" #"empty_record"))
                               (#"lempty" (#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))))))
                         #"any_bool"
-                        #"xor")
-                     (#"cons" (#"cons_record" #"true" (#"cons_record" #"true"))
-                        (#"cons" (#"cons_record" #"true" (#"cons_record" #"true"))
+                        #"0")
+                     (#"cons" (#"cons_record" #"true" (#"cons_record" #"true" #"empty_record"))
+                        (#"cons" (#"cons_record" #"true" (#"cons_record" #"true" #"empty_record"))
                            (#"lempty" (#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))))))
                      (#"andb" #"any_bool" (#"val_subst" #"wkn" #"nonzero"))
-                     #"any_nat"
+                     #"xor"
                 }}.
 
-Definition tr_T := {{e#"true"}}.
+(*
+Definition tr_just_filter := {{e#"join"
+                     (#"filter"
+                        (#"cons" (#"cons_record" #"true" (#"cons_record" #"false" #"empty_record"))
+                           (#"cons" (#"cons_record" #"true" (#"cons_record" #"false" #"empty_record"))
+                              (#"lempty" (#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))))))
+                        (#"notb" #"nonzero"))
+                     (#"cons" (#"cons_record" #"true" (#"cons_record" #"true" #"empty_record"))
+                        (#"cons" (#"cons_record" #"true" (#"cons_record" #"true" #"empty_record"))
+                           (#"lempty" (#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))))))
+                     (#"andb" #"any_bool" (#"val_subst" #"wkn" #"nonzero"))
+                     #"xor"
+                }}.
+*)
+
+(* TODO FOR THE WEEK *)
+(* add fold on an empty list case, no need to write the whole interpretation *) 
+(* do \setminus on two sets *)
+(* not a constant function !!! *)
+(* slap a real-world definition on it *)
+(* preservation: *)
+
+Definition tr_fold := {{e#"fold"
+                       (#"join"
+                          (#"filter"
+                             (#"cons" (#"cons_record" #"true" (#"cons_record" #"false" #"empty_record"))
+                                (#"cons" (#"cons_record" #"true" (#"cons_record" #"false" #"empty_record"))
+                                   (#"lempty" (#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))))))
+                             (#"notb" #"nonzero"))
+                          (#"cons" (#"cons_record" #"true" (#"cons_record" #"true" #"empty_record"))
+                             (#"cons" (#"cons_record" #"true" (#"cons_record" #"true" #"empty_record"))
+                                (#"lempty" (#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))))))
+                          (#"andb" #"any_bool" (#"val_subst" #"wkn" #"nonzero"))
+                          #"any_nat")
+                       #"0"
+                       #"any_nat"
+                }}.
+
+Definition trx := {{e#"listdiff"
+                      (#"cons" #"0" (#"cons" (#"1+" (#"1+" #"0")) (#"lempty" #"nat")))
+                      (#"join"
+                          (#"filter"
+                             (#"cons" (#"cons_record" #"true" (#"cons_record" #"false" #"empty_record"))
+                                (#"cons" (#"cons_record" #"true" (#"cons_record" #"false" #"empty_record"))
+                                   (#"lempty" (#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))))))
+                             (#"notb" #"nonzero"))
+                          (#"cons" (#"cons_record" #"true" (#"cons_record" #"true" #"empty_record"))
+                             (#"cons" (#"cons_record" #"true" (#"cons_record" #"true" #"empty_record"))
+                                (#"lempty" (#"Trecord" (#"cons_list_ty" #"bool" (#"cons_list_ty" #"bool" #"empty_list_ty"))))))
+                          (#"andb" #"any_bool" (#"val_subst" #"wkn" #"nonzero"))
+                          #"any_nat")
+                }}.
+(* TODO change nat to be useful *)
+(* TODO do something useful... *)
+(* ...tests? *)
 
 Derive trx_derived
-  SuchThat (elab_term (fiat++value_subst) [] trx trx_derived {{s#"val" #"emp" (#"list" (#"Trecord" #"empty_list_ty"))}})
+  SuchThat (elab_term (fiat++value_subst) [] trx trx_derived {{s#"val" #"emp" (#"list" #"nat")}})
   As trx_wf.
 Proof.
   unfold trx, trx_derived.
   unshelve (repeat t); apply todo.
 Qed.
 
-Print trx_derived.
+(* fold [join] thing xor *)
+
+Compute trx.
+
+Compute hide_term_implicits (fiat++value_subst++exp_subst)
+  (PositiveInstantiation.egraph_simpl' (fiat++value_subst++exp_subst) 20 20 60 [] trx_derived).
+
+Compute value_subst_def.
+
+(* Imp.v in Pyrosome
+   TypeSystem.v in Fiat2
+   look at commands, implement a couple equations from fiat2 *)
+
+Definition trt := {{e#"andb" (#"orb" #"any_bool" (#"notb" #"fil_special_never")) (#"orb" #"any_bool" #"fil_special_never")}}.
+
+Derive trt_derived
+  SuchThat (elab_term (fiat++value_subst) [] trt trt_derived {{s#"bool"}})
+  As trt_wf.
+Proof.
+  unfold trt, trt_derived.
+  unshelve (repeat t); apply todo.
+Qed.
+
+Print trt_derived.
 
 Compute fiat.
+
+(* Currently implemented:
+    - filter in filter, i.e.   [a for a in [a for a in goods if red] if blue]
+                               = [a for a in goods if (a is red and a is blue)]
+                               (filter <-> filter[filter])
+
+    - pushdown predicate, i.e. [(a, b) for a in shop1 for b in shop2 if (a[0] = 1)
+                               = [(a, b) for a in [a for a in shop1 if (a[0] = 1) for b in shop2 if true]
+                               (join <-> join[filter])
+
+    - join in projection, i.e.  [(a[0] & b[0]) for (a, b) in [(a, b) for a in shop1 for b in shop2] if b[1]]
+                               = [(a[0] & b[0]) for a in shop1 for b in shop2 if b[1]]
+                               (join <-> proj[join])
+
+   I think just these three are not enough, we'd have to either rely on
+
+*)
+
+(* questions:
+        - am I allowed to use properties of user-defined functions (see e.g. compare, andb)
+          or do we want the program to be generic enough to work
+          (for example: if I had two filters, the conjunction of whose predicates is false)
+
+        - the trouble with using pushdown predicate is that the "inputs" change, how would
+          I write an and whose inputs are different?
+*)
 
 Definition tr2 := {{e#"join"
                      (#"join"
@@ -1146,10 +1316,7 @@ Compute fiat.
 *)
 
 Compute hide_term_implicits (fiat++value_subst)
-  (PositiveInstantiation.egraph_simpl' (fiat++value_subst) 100 100 300 [] tr2_derived).
-
-Compute hide_term_implicits (fiat++value_subst++exp_subst)
-  (PositiveInstantiation.egraph_simpl' (fiat++value_subst++exp_subst) 100 100 300 [] tr2_derived).
+  (PositiveInstantiation.egraph_simpl' (fiat++value_subst) 20 20 100 [] trx_derived).
 
 (*
 (* basic tests, true/false *)
@@ -1355,3 +1522,4 @@ Compute hide_term_implicits (fiat++value_subst) (PositiveInstantiation.egraph_si
                          (#"0" (#"ext" (#"ext" #"emp" (#"Trecord" (#"empty_list_ty"))) (#"Trecord" (#"cons_list_ty" #"bool" #"empty_list_ty"))))}}).
 
 *)
+
