@@ -118,11 +118,6 @@ Definition fiat_def : lang :=
       #"orb" "a" "b": #"val" "G" #"bool"
   ];
   [:=
-      "G": #"env"
-      ----------------------------------------------- ("and_true")
-      #"andb" #"true" #"true" = #"true": #"val" "G" #"bool"
-  ];
-  [:=
       "G": #"env", "b": #"val" "G" #"bool"
       ----------------------------------------------- ("and_false_l")
       #"andb" #"false" "b" = #"false": #"val" "G" #"bool"
@@ -152,7 +147,6 @@ Definition fiat_def : lang :=
       ----------------------------------------------- ("non_cont_r")
       #"andb" "b" (#"notb" "b") = #"false": #"val" "G" #"bool"
   ];
-
   (* todo *)
   (* binop definitions *)
     (*
@@ -304,11 +298,11 @@ Definition fiat_def : lang :=
   ];
   (* comparison *)
   (* we probably want to stick to values here, though...? *)
+  (*
   [:| 
       -----------------------------------------------
       #"comparison": #"ty" (* analog: rocq corelib comparison *)
   ]; 
-  (*
   [:| 
       "A": #"ty"
       -----------------------------------------------
@@ -605,7 +599,19 @@ Definition fiat_def : lang :=
       "p": #"val" (#"ext" "G" "t") #"bool"
       ----------------------------------------------- 
       #"filter" "tb" "p": #"val" "G" (#"list" "t")
-  ];
+      ];
+  [:=
+      "G": #"env",
+      "t": #"ty",
+      "tl": #"val" "G" ("list" "t"),
+      "th": #"val" "G" "t",
+      "p": #"val" (#"ext" "G" "t") #"bool"
+      ----------------------------------------------- ("filter_eval")
+      #"filter" (#"cons" "th" "tl") = #"if" (#"val_subst" (#"snoc") "p") 
+      (#"cons" "th" (#"filter" "t" "p"))
+      (#"filter" "t" "p")
+      : #"val" "G" (#"list" "t")
+      ];
 
   (* If the predicate is false, then there is nothing in the table *)
   [:=
@@ -615,6 +621,8 @@ Definition fiat_def : lang :=
       ----------------------------------------------- ("filter_empty")
       #"filter" "tb" (#"false") = #"lempty" "t": #"val" "G" (#"list" "t")
   ];
+
+  (*
 
   [:|
       "G": #"env",
@@ -631,6 +639,7 @@ Definition fiat_def : lang :=
       ----------------------------------------------- ("filter_exclude")
       #"filter" "tb" (#"val_subst" #"wkn" (#"exclude" "tb")) = #"lempty" "t": #"val" "G" (#"list" "t")
   ];
+   *)
     
     
     (*
@@ -1008,7 +1017,6 @@ Definition fiat_def : lang :=
         let pnew := EBinop OAnd p (ELet (EVar x) y p2) in
         interp_expr store env (EFilter (EFilter tb y p2) x p) =
         interp_expr store env (EFilter tb x pnew). *)
-
   ]}.
 
 Compute fiat_def.
@@ -1017,6 +1025,7 @@ Compute fiat_def.
    bundle into a rule_set
    call egraph_simpl *)
 
+Compute "computed fiat".
 
 Derive fiat
   SuchThat (elab_lang_ext (exp_subst++value_subst) fiat_def fiat)
@@ -1024,7 +1033,10 @@ Derive fiat
 Proof. auto_elab. Qed.
 #[export] Hint Resolve fiat_wf : elab_pfs.
 
+Compute "derived fiat".
+
 Compute fiat.
+(*
 
 Definition tr := {{e#"join"
                      (#"join"
@@ -1036,6 +1048,8 @@ Definition tr := {{e#"join"
                      (#"andb" #"any_bool" (#"val_subst" #"wkn" #"fil_special_never"))
                      #"any_nat"
                 }}.
+
+Check tr.
 
 (*
 Definition tr := {{e#"join"
